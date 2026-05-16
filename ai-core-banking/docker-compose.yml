@@ -1,0 +1,180 @@
+version: '3.8'
+
+services:
+
+  # ============================
+  # MySQL Database
+  # ============================
+  mysql:
+    image: mysql:8.0
+    container_name: ebanking-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: ebanking
+      MYSQL_PASSWORD: ebanking123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./infrastructure/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - ebanking-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================
+  # Mailhog (Email Testing)
+  # ============================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ebanking-mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - ebanking-network
+
+  # ============================
+  # Nginx Reverse Proxy
+  # ============================
+  nginx:
+    image: nginx:alpine
+    container_name: ebanking-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - mysql
+    networks:
+      - ebanking-network
+
+  # ============================
+  # Microservices
+  # ============================
+  customer-service:
+    build:
+      context: ./e-banking-customer-service
+      dockerfile: Dockerfile
+    container_name: ebanking-customer-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ebanking_customers
+      SPRING_DATASOURCE_USERNAME: ebanking
+      SPRING_DATASOURCE_PASSWORD: ebanking123
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ebanking-network
+
+  account-service:
+    build:
+      context: ./e-banking-account-service
+      dockerfile: Dockerfile
+    container_name: ebanking-account-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ebanking_accounts
+      SPRING_DATASOURCE_USERNAME: ebanking
+      SPRING_DATASOURCE_PASSWORD: ebanking123
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ebanking-network
+
+  card-service:
+    build:
+      context: ./e-banking-card-service
+      dockerfile: Dockerfile
+    container_name: ebanking-card-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ebanking_cards
+      SPRING_DATASOURCE_USERNAME: ebanking
+      SPRING_DATASOURCE_PASSWORD: ebanking123
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ebanking-network
+
+  transaction-service:
+    build:
+      context: ./e-banking-transaction-service
+      dockerfile: Dockerfile
+    container_name: ebanking-transaction-service
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ebanking_transactions
+      SPRING_DATASOURCE_USERNAME: ebanking
+      SPRING_DATASOURCE_PASSWORD: ebanking123
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ebanking-network
+
+  fraud-service:
+    build:
+      context: ./e-banking-fraud-service
+      dockerfile: Dockerfile
+    container_name: ebanking-fraud-service
+    restart: unless-stopped
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ebanking_fraud
+      SPRING_DATASOURCE_USERNAME: ebanking
+      SPRING_DATASOURCE_PASSWORD: ebanking123
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ebanking-network
+
+  notification-service:
+    build:
+      context: ./e-banking-notification-service
+      dockerfile: Dockerfile
+    container_name: ebanking-notification-service
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ebanking_notifications
+      SPRING_DATASOURCE_USERNAME: ebanking
+      SPRING_DATASOURCE_PASSWORD: ebanking123
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    networks:
+      - ebanking-network
+
+volumes:
+  mysql-data:
+
+networks:
+  ebanking-network:
+    driver: bridge
