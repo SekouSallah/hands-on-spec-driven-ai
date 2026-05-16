@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../home/home_screen.dart';
+import '../transactions/transfer_screen.dart';
+import '../cards/cards_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -13,9 +15,9 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    Center(child: Text('Accounts Screen')), // Mock Accounts
-    Center(child: Text('Cards Screen')),    // Mock Cards
-    Center(child: Text('Profile Screen')),  // Mock Profile
+    TransferScreen(),
+    CardsScreen(),
+    Center(child: Text('Profile Screen (WIP)')),
   ];
 
   @override
@@ -32,7 +34,7 @@ class _MainScreenState extends State<MainScreen> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Accounts'),
+          BottomNavigationBarItem(icon: Icon(Icons.swap_horiz), label: 'Transfer'),
           BottomNavigationBarItem(icon: Icon(Icons.credit_card), label: 'Cards'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
